@@ -1,5 +1,5 @@
-# AdventOfCode2019
-Advent of Code 2019 in Elixir
+# 🎄 Advent Of Code 2019 🎄
+My solutions for Advent of Code 2019 in Elixir
 
 [Day 1: The Tyranny of the Rocket Equation](https://github.com/gb1/AdventOfCode2019/blob/master/day1/lib/day1.ex)
 
