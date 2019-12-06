@@ -8,3 +8,7 @@ My solutions for Advent of Code 2019 in Elixir
 [Day 3: Crossed Wires](https://github.com/gb1/AdventOfCode2019/blob/master/day3/lib/day3.ex)
 
 [Day 4: Secure Container](https://github.com/gb1/AdventOfCode2019/blob/master/day4/lib/day4.ex)
+
+Day 5 not done yet!
+
+[Day 6: Day 6: Universal Orbit Map](https://github.com/gb1/AdventOfCode2019/blob/master/day6/lib/day6.ex)
