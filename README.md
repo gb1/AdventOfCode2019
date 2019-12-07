@@ -9,6 +9,6 @@ My solutions for Advent of Code 2019 in Elixir
 
 [Day 4: Secure Container](https://github.com/gb1/AdventOfCode2019/blob/master/day4/lib/day4.ex)
 
-Day 5 not done yet!
+[Day 5: Sunny with a Chance of Asteroids](https://github.com/gb1/AdventOfCode2019/blob/master/day5/lib/day5.ex)
 
 [Day 6: Day 6: Universal Orbit Map](https://github.com/gb1/AdventOfCode2019/blob/master/day6/lib/day6.ex)
