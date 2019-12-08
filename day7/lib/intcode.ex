@@ -1,23 +1,33 @@
-defmodule Day5 do
-  @moduledoc """
-  Day 5: Sunny with a Chance of Asteroids
-  """
+defmodule Intcode do
 
-  @program_input 5
+  # def part1 do
+  #   File.read!("input")
+  #   |> String.replace("\n", "")
+  #   |> String.split(",", trim: true)
+  #   |> Enum.map(&String.to_integer/1)
+  #   |> load_program()
+  #   |> run_program(0)
+  # end
 
-  def part1 do
-    File.read!("input")
-    |> String.replace("\n", "")
-    |> String.split(",", trim: true)
-    |> Enum.map(&String.to_integer/1)
-    |> load_program()
-    |> run_program(0)
-  end
+  # def part2 do
+  #   # "3,9,8,9,10,9,4,9,99,-1,8"
+  #   #"3,3,1107,-1,8,3,4,3,99"
+  #   "3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9"
+  #   |> String.split(",", trim: true)
+  #   |> Enum.map(&String.to_integer/1)
+  #   |> load_program()
+  #   |> run_program(0)
+  # end
 
-  def part2 do
-    # "3,9,8,9,10,9,4,9,99,-1,8"
-    #"3,3,1107,-1,8,3,4,3,99"
-    "3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9"
+  def run(program, input) do
+
+    Agent.start_link(fn -> input end, name: :input)
+    Agent.start_link(fn -> nil end, name: :output)
+
+    Agent.update :input, fn _x -> input end
+    Agent.update :output, fn _x -> nil end
+
+    program
     |> String.split(",", trim: true)
     |> Enum.map(&String.to_integer/1)
     |> load_program()
@@ -29,12 +39,8 @@ defmodule Day5 do
 
     {program, position} = execute(opcode, position, program)
 
-    # IO.inspect opcode
-    # IO.inspect program
-    # IO.inspect position
-
     case program[position] do
-      99 -> :done
+      99 -> Agent.get :output, fn x -> x end
       _ -> run_program(program, position)
     end
   end
@@ -130,11 +136,16 @@ defmodule Day5 do
   end
 
   def execute([_, _, _, 0, 3], position, program) do
-    {Map.put(program, program[position + 1], @program_input), position + 2}
+
+    [input | tail ] = Agent.get :input, fn x -> x end
+    Agent.update :input, fn _x -> tail end
+
+    {Map.put(program, program[position + 1], input), position + 2}
   end
 
   def execute([_, _, _, 0, 4], position, program) do
-    IO.inspect(program[program[position + 1]])
+    # IO.inspect(program[program[position + 1]])
+    Agent.update :output, fn _x -> program[program[position + 1]] end
     {program, position + 2}
   end
 
@@ -333,8 +344,6 @@ defmodule Day5 do
         ), position + 4}
     end
   end
-
-
 
   @doc """
   Parse an integer opcode into a list for pattern matching
