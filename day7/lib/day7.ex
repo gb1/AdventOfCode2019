@@ -17,6 +17,13 @@ defmodule Day7 do
 
   end
 
+  def part2 do
+
+    # create named agents for each amplifier, update the input of b from a etc.
+
+  end
+
+
   def permutations([]), do: [[]]
   def permutations(list), do: for elem <- list, rest <- permutations(list--[elem]), do: [elem|rest]
 

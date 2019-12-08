@@ -11,4 +11,8 @@ My solutions for Advent of Code 2019 in Elixir
 
 [Day 5: Sunny with a Chance of Asteroids](https://github.com/gb1/AdventOfCode2019/blob/master/day5/lib/day5.ex)
 
-[Day 6: Day 6: Universal Orbit Map](https://github.com/gb1/AdventOfCode2019/blob/master/day6/lib/day6.ex)
+[Day 6: Universal Orbit Map](https://github.com/gb1/AdventOfCode2019/blob/master/day6/lib/day6.ex)
+
+[Day 7: Amplification Circuit](https://github.com/gb1/AdventOfCode2019/blob/master/day7/lib/day7.ex)
+
+[Day 8: Space Image Format ](https://github.com/gb1/AdventOfCode2019/blob/master/day8/lib/day8.ex)
