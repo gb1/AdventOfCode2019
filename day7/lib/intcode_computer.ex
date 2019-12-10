@@ -1,31 +1,42 @@
-defmodule Intcode do
-  def run(program, input) do
-    Agent.start_link(fn -> input end, name: :input)
-    Agent.start_link(fn -> nil end, name: :output)
+defmodule IntcodeComputer do
+  defstruct program: %{}, position: 0, output: nil, input: nil
 
-    Agent.update(:input, fn _x -> input end)
-    Agent.update(:output, fn _x -> nil end)
-
-    program
-    |> String.split(",", trim: true)
-    |> Enum.map(&String.to_integer/1)
-    |> load_program()
-    |> run_program(0)
+  def new(program, name, phase) do
+    Agent.start_link(fn -> %IntcodeComputer{program: program, position: 0, input: phase} end,
+      name: name
+    )
   end
 
-  def run_program(program, position) do
+  def save_state(program, position, name) do
+    Agent.update(name, fn _computer ->
+      %IntcodeComputer{program: program, position: position}
+    end)
+  end
+
+  def run_program(program, position, name) do
     opcode = program[position] |> parse_opcode()
 
-    {program, position} = execute(opcode, position, program)
+    {program, position} = execute(opcode, position, program, name)
 
     case program[position] do
-      99 -> Agent.get(:output, fn x -> x end)
-      _ -> run_program(program, position)
+      99 ->
+        save_state(program, position, name)
+        {:halt, Agent.get(name, fn %{output: output} -> output end)}
+
+      4 ->
+        # doesnt call execute!!
+        save_state(program, position, name)
+        {:output, Agent.get(name, fn %{output: output} -> output end)}
+
+      _ ->
+        run_program(program, position, name)
     end
   end
 
   def load_program(input) do
     input
+    |> String.split(",", trim: true)
+    |> Enum.map(&String.to_integer/1)
     |> Enum.with_index()
     |> Enum.map(fn {x, y} -> {y, x} end)
     |> Enum.into(%{})
@@ -50,7 +61,7 @@ defmodule Intcode do
   iex> Day5.execute([0,0,0,0,4], 0, %{0 => 2, 1 => 2, 2 => 0, 3 => 3, 4 => 99})
   {%{0 => 2, 1 => 2, 2 => 0, 3 => 3, 4 => 99}, 2}
   """
-  def execute([0, 0, 0, 0, 1], position, program) do
+  def execute([0, 0, 0, 0, 1], position, program, _name) do
     {Map.put(
        program,
        program[position + 3],
@@ -58,7 +69,7 @@ defmodule Intcode do
      ), position + 4}
   end
 
-  def execute([0, 0, 1, 0, 1], position, program) do
+  def execute([0, 0, 1, 0, 1], position, program, _name) do
     {Map.put(
        program,
        program[position + 3],
@@ -66,7 +77,7 @@ defmodule Intcode do
      ), position + 4}
   end
 
-  def execute([0, 1, 0, 0, 1], position, program) do
+  def execute([0, 1, 0, 0, 1], position, program, _name) do
     {Map.put(
        program,
        program[position + 3],
@@ -74,7 +85,7 @@ defmodule Intcode do
      ), position + 4}
   end
 
-  def execute([0, 1, 1, 0, 1], position, program) do
+  def execute([0, 1, 1, 0, 1], position, program, _name) do
     {Map.put(
        program,
        program[position + 3],
@@ -82,7 +93,7 @@ defmodule Intcode do
      ), position + 4}
   end
 
-  def execute([0, 0, 0, 0, 2], position, program) do
+  def execute([0, 0, 0, 0, 2], position, program, _name) do
     {Map.put(
        program,
        program[position + 3],
@@ -90,7 +101,7 @@ defmodule Intcode do
      ), position + 4}
   end
 
-  def execute([0, 0, 1, 0, 2], position, program) do
+  def execute([0, 0, 1, 0, 2], position, program, _name) do
     {Map.put(
        program,
        program[position + 3],
@@ -98,7 +109,7 @@ defmodule Intcode do
      ), position + 4}
   end
 
-  def execute([0, 1, 0, 0, 2], position, program) do
+  def execute([0, 1, 0, 0, 2], position, program, _name) do
     {Map.put(
        program,
        program[position + 3],
@@ -106,7 +117,7 @@ defmodule Intcode do
      ), position + 4}
   end
 
-  def execute([0, 1, 1, 0, 2], position, program) do
+  def execute([0, 1, 1, 0, 2], position, program, _name) do
     {Map.put(
        program,
        program[position + 3],
@@ -114,42 +125,43 @@ defmodule Intcode do
      ), position + 4}
   end
 
-  def execute([_, _, _, 0, 3], position, program) do
-    [input | tail] = Agent.get(:input, fn x -> x end)
-    Agent.update(:input, fn _x -> tail end)
+  def execute([_, _, _, 0, 3], position, program, name) do
+    input = Agent.get(name, fn %{input: input} -> input end)
 
     {Map.put(program, program[position + 1], input), position + 2}
   end
 
-  def execute([_, _, _, 0, 4], position, program) do
-    # IO.inspect(program[program[position + 1]])
-    Agent.update(:output, fn _x -> program[program[position + 1]] end)
+  def execute([_, _, _, 0, 4], position, program, name) do
+    IO.inspect(program[program[position + 1]])
+
+    Agent.update(name, fn computer -> %{computer | output: program[program[position + 1]]} end)
+
     {program, position + 2}
   end
 
   # Jump if true
-  def execute([_, 0, 0, 0, 5], position, program) do
+  def execute([_, 0, 0, 0, 5], position, program, _name) do
     case program[program[position + 1]] do
       0 -> {program, position + 3}
       _ -> {program, program[program[position + 2]]}
     end
   end
 
-  def execute([_, 0, 1, 0, 5], position, program) do
+  def execute([_, 0, 1, 0, 5], position, program, _name) do
     case program[position + 1] do
       0 -> {program, position + 3}
       _ -> {program, program[program[position + 2]]}
     end
   end
 
-  def execute([_, 1, 0, 0, 5], position, program) do
+  def execute([_, 1, 0, 0, 5], position, program, _name) do
     case program[program[position + 1]] do
       0 -> {program, position + 3}
       _ -> {program, program[position + 2]}
     end
   end
 
-  def execute([_, 1, 1, 0, 5], position, program) do
+  def execute([_, 1, 1, 0, 5], position, program, _name) do
     case program[position + 1] do
       0 -> {program, position + 3}
       _ -> {program, program[position + 2]}
@@ -157,28 +169,28 @@ defmodule Intcode do
   end
 
   # Jump if false
-  def execute([_, 0, 0, 0, 6], position, program) do
+  def execute([_, 0, 0, 0, 6], position, program, _name) do
     case program[program[position + 1]] do
       0 -> {program, program[program[position + 2]]}
       _ -> {program, position + 3}
     end
   end
 
-  def execute([_, 0, 1, 0, 6], position, program) do
+  def execute([_, 0, 1, 0, 6], position, program, _name) do
     case program[position + 1] do
       0 -> {program, program[program[position + 2]]}
       _ -> {program, position + 3}
     end
   end
 
-  def execute([_, 1, 0, 0, 6], position, program) do
+  def execute([_, 1, 0, 0, 6], position, program, _name) do
     case program[program[position + 1]] do
       0 -> {program, program[position + 2]}
       _ -> {program, position + 3}
     end
   end
 
-  def execute([_, 1, 1, 0, 6], position, program) do
+  def execute([_, 1, 1, 0, 6], position, program, _name) do
     case program[position + 1] do
       0 -> {program, program[position + 2]}
       _ -> {program, position + 3}
@@ -186,7 +198,7 @@ defmodule Intcode do
   end
 
   # Less than
-  def execute([_, 0, 0, 0, 7], position, program) do
+  def execute([_, 0, 0, 0, 7], position, program, _name) do
     cond do
       program[program[position + 1]] < program[program[position + 2]] ->
         {Map.put(
@@ -204,7 +216,7 @@ defmodule Intcode do
     end
   end
 
-  def execute([_, 0, 1, 0, 7], position, program) do
+  def execute([_, 0, 1, 0, 7], position, program, _name) do
     cond do
       program[position + 1] < program[program[position + 2]] ->
         {Map.put(
@@ -222,7 +234,7 @@ defmodule Intcode do
     end
   end
 
-  def execute([_, 1, 0, 0, 7], position, program) do
+  def execute([_, 1, 0, 0, 7], position, program, _name) do
     cond do
       program[program[position + 1]] < program[position + 2] ->
         {Map.put(
@@ -240,7 +252,7 @@ defmodule Intcode do
     end
   end
 
-  def execute([_, 1, 1, 0, 7], position, program) do
+  def execute([_, 1, 1, 0, 7], position, program, _name) do
     cond do
       program[position + 1] < program[position + 2] ->
         {Map.put(
@@ -259,7 +271,7 @@ defmodule Intcode do
   end
 
   # Equal
-  def execute([_, 0, 0, 0, 8], position, program) do
+  def execute([_, 0, 0, 0, 8], position, program, _name) do
     cond do
       program[program[position + 1]] == program[program[position + 2]] ->
         {Map.put(
@@ -277,7 +289,7 @@ defmodule Intcode do
     end
   end
 
-  def execute([0, 0, 1, 0, 8], position, program) do
+  def execute([0, 0, 1, 0, 8], position, program, _name) do
     cond do
       program[position + 1] == program[program[position + 2]] ->
         {Map.put(
@@ -295,7 +307,7 @@ defmodule Intcode do
     end
   end
 
-  def execute([_, 1, 0, 0, 8], position, program) do
+  def execute([_, 1, 0, 0, 8], position, program, _name) do
     cond do
       program[program[position + 1]] == program[position + 2] ->
         {Map.put(
@@ -313,7 +325,7 @@ defmodule Intcode do
     end
   end
 
-  def execute([_, 1, 1, 0, 8], position, program) do
+  def execute([_, 1, 1, 0, 8], position, program, _name) do
     cond do
       program[position + 1] == program[position + 2] ->
         {Map.put(
