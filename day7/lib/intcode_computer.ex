@@ -1,20 +1,27 @@
 defmodule IntcodeComputer do
   defstruct program: %{}, position: 0, output: nil, input: nil
 
-  def new(program, name, phase) do
-    Agent.start_link(fn -> %IntcodeComputer{program: program, position: 0, input: phase} end,
+  def new(program, name) do
+    Agent.start_link(fn -> %IntcodeComputer{program: program, position: 0, input: nil} end,
       name: name
     )
   end
 
   def save_state(program, position, name) do
-    Agent.update(name, fn _computer ->
-      %IntcodeComputer{program: program, position: position}
+    Agent.update(name, fn %IntcodeComputer{
+                            program: _prog,
+                            position: _pos,
+                            input: input,
+                            output: output
+                          } ->
+      %IntcodeComputer{program: program, position: position, input: input, output: output}
     end)
   end
 
   def run_program(program, position, name) do
     opcode = program[position] |> parse_opcode()
+
+    # IO.inspect(opcode)
 
     {program, position} = execute(opcode, position, program, name)
 
@@ -23,14 +30,25 @@ defmodule IntcodeComputer do
         save_state(program, position, name)
         {:halt, Agent.get(name, fn %{output: output} -> output end)}
 
-      4 ->
-        # doesnt call execute!!
+      3 ->
         save_state(program, position, name)
-        {:output, Agent.get(name, fn %{output: output} -> output end)}
+        {:sleeping, Agent.get(name, fn %{output: output} -> output end)}
 
       _ ->
         run_program(program, position, name)
     end
+  end
+
+  def set_input(name, input) do
+    Agent.update(name, fn computer -> %{computer | input: input} end)
+  end
+
+  def get_program(name) do
+    Agent.get(name, fn %{program: program} -> program end)
+  end
+
+  def get_position(name) do
+    Agent.get(name, fn %{position: position} -> position end)
   end
 
   def load_program(input) do
@@ -127,13 +145,12 @@ defmodule IntcodeComputer do
 
   def execute([_, _, _, 0, 3], position, program, name) do
     input = Agent.get(name, fn %{input: input} -> input end)
-
+    # IO.puts("Using input: " <> Integer.to_string(input) <> " 🤖 " <> Atom.to_string(name))
+    Agent.update(name, fn computer -> %{computer | input: nil} end)
     {Map.put(program, program[position + 1], input), position + 2}
   end
 
   def execute([_, _, _, 0, 4], position, program, name) do
-    IO.inspect(program[program[position + 1]])
-
     Agent.update(name, fn computer -> %{computer | output: program[program[position + 1]]} end)
 
     {program, position + 2}
